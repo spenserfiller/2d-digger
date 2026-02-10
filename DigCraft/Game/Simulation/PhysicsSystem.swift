@@ -1,4 +1,4 @@
-import Foundation
+aimport Foundation
 
 struct PhysicsSystem: Sendable {
     static let gravity: Double = -30.0       // tiles/s^2

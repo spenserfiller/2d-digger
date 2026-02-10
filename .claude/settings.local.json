@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(xcodegen:*)"
+      "Bash(xcodegen:*)",
+      "Bash(xcodebuild:*)"
     ]
   }
 }

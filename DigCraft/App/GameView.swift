@@ -3,17 +3,19 @@ import SpriteKit
 
 struct GameView: View {
     let simulation: GameSimulation
+    let coordinator: GameCoordinator?
     let scene: GameScene
     var onPause: () -> Void
     @State private var showControls = false
 
-    init(simulation: GameSimulation, onPause: @escaping () -> Void) {
+    init(simulation: GameSimulation, coordinator: GameCoordinator? = nil, onPause: @escaping () -> Void) {
         self.simulation = simulation
+        self.coordinator = coordinator
         self.onPause = onPause
 
         let scene = GameScene()
         scene.scaleMode = .resizeFill
-        scene.configure(simulation: simulation)
+        scene.configure(simulation: simulation, coordinator: coordinator)
         self.scene = scene
     }
 
@@ -44,7 +46,13 @@ struct GameView: View {
                     Spacer()
 
                     #if os(iOS)
-                    Button(action: { simulation.process(.jump) }) {
+                    Button(action: {
+                        if let coordinator {
+                            coordinator.sendCommand(.jump)
+                        } else {
+                            simulation.process(.jump)
+                        }
+                    }) {
                         Image(systemName: "arrow.up.circle.fill")
                             .font(.system(size: 44))
                             .foregroundStyle(.white.opacity(0.7))

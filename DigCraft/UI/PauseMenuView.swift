@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct PauseMenuView: View {
+    var isClient: Bool = false
+    var isMultiplayer: Bool = false
     var onResume: () -> Void
     var onSave: () -> Void
     var onQuit: () -> Void
@@ -22,13 +24,15 @@ struct PauseMenuView: View {
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
 
-                    Button("Save Game") {
-                        onSave()
+                    if !isClient {
+                        Button("Save Game") {
+                            onSave()
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.large)
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
 
-                    Button("Quit to Title") {
+                    Button(isMultiplayer ? "Disconnect" : "Quit to Title") {
                         onQuit()
                     }
                     .buttonStyle(.bordered)

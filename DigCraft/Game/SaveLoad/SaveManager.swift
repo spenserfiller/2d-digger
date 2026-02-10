@@ -11,27 +11,28 @@ enum SaveManager {
     }
 
     static func save(simulation: GameSimulation) {
-        let generator = WorldGenerator(seed: simulation.seed)
-        let originalWorld = generator.generate()
+        let deltas = WorldDeltaComputer.computeTileDeltas(simulation: simulation)
 
-        // Compute tile deltas
-        var deltas: [TileDelta] = []
-        for y in 0..<World.heightInTiles {
-            for x in 0..<World.widthInTiles {
-                let current = simulation.world.tileAt(x: x, y: y)
-                let original = originalWorld.tileAt(x: x, y: y)
-                if current != original {
-                    deltas.append(TileDelta(x: x, y: y, tileType: current))
-                }
-            }
+        let isMultiplayer = simulation.players.count > 1
+
+        let saveData: SaveData
+        if isMultiplayer {
+            saveData = SaveData(
+                seed: simulation.seed,
+                tileDeltas: deltas,
+                player: simulation.player,
+                inventory: simulation.inventory,
+                players: simulation.players,
+                inventories: simulation.inventories
+            )
+        } else {
+            saveData = SaveData(
+                seed: simulation.seed,
+                tileDeltas: deltas,
+                player: simulation.player,
+                inventory: simulation.inventory
+            )
         }
-
-        let saveData = SaveData(
-            seed: simulation.seed,
-            tileDeltas: deltas,
-            player: simulation.player,
-            inventory: simulation.inventory
-        )
 
         do {
             let encoder = JSONEncoder()

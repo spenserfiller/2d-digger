@@ -2,8 +2,9 @@ import SpriteKit
 
 final class GameScene: SKScene {
     private var simulation: GameSimulation!
+    private var coordinator: GameCoordinator?
     private var chunkRenderer: ChunkRenderer!
-    private var playerNode: PlayerNode!
+    private var playerNodes: [PlayerId: PlayerNode] = [:]
     private var cameraController: CameraController!
     private var inputMapper: InputMapper!
     private var lastUpdateTime: TimeInterval = 0
@@ -12,11 +13,16 @@ final class GameScene: SKScene {
         didSet { updateDebugOverlay() }
     }
 
+    private var isClient: Bool {
+        coordinator?.mode.isClient == true
+    }
+
     // World layer node for all tile maps
     let worldNode = SKNode()
 
-    func configure(simulation: GameSimulation) {
+    func configure(simulation: GameSimulation, coordinator: GameCoordinator? = nil) {
         self.simulation = simulation
+        self.coordinator = coordinator
     }
 
     override func didMove(to view: SKView) {
@@ -32,10 +38,8 @@ final class GameScene: SKScene {
         chunkRenderer = ChunkRenderer(atlas: atlas, parentNode: worldNode)
         chunkRenderer.buildAll(world: simulation.world)
 
-        // Player node
-        playerNode = PlayerNode()
-        playerNode.updatePosition(player: simulation.player)
-        worldNode.addChild(playerNode.sprite)
+        // Create player node for local player
+        ensurePlayerNode(for: simulation.localPlayerId)
 
         // Camera
         cameraController = CameraController()
@@ -50,7 +54,7 @@ final class GameScene: SKScene {
         cameraController.snapTo(playerPosition: playerPixelPos)
 
         // Input mapper
-        inputMapper = InputMapper(scene: self, simulation: simulation)
+        inputMapper = InputMapper(scene: self, simulation: simulation, coordinator: coordinator)
 
         // Enable FPS display in debug builds
         #if DEBUG
@@ -71,15 +75,22 @@ final class GameScene: SKScene {
         if lastUpdateTime == 0 {
             dt = 1.0 / 60.0
         } else {
-            dt = min(currentTime - lastUpdateTime, 0.1) // cap at 100ms
+            dt = min(currentTime - lastUpdateTime, 0.1)
         }
         lastUpdateTime = currentTime
 
         // Process held keys
         inputMapper?.updateHeldKeys()
 
-        // Update simulation
-        simulation.update(deltaTime: dt)
+        if isClient {
+            // Client path: prediction for local player only
+            simulation.updateLocalOnly(deltaTime: dt)
+            coordinator?.updateInterpolation(deltaTime: dt)
+        } else {
+            // Host / single-player path: full simulation
+            simulation.update(deltaTime: dt)
+            coordinator?.hostTick()
+        }
 
         // Consume events
         let events = simulation.consumeEvents()
@@ -91,7 +102,7 @@ final class GameScene: SKScene {
                 break // handled below
             case .tileChanged:
                 break // chunk dirty handles visual update
-            case .inventoryChanged:
+            case .inventoryChanged(_):
                 break // SwiftUI observes directly
             }
         }
@@ -99,15 +110,38 @@ final class GameScene: SKScene {
         // Rebuild dirty chunks
         chunkRenderer.rebuildDirtyChunks(world: simulation.world)
 
-        // Update player visual
-        playerNode.updatePosition(player: simulation.player)
+        // Update all player visuals
+        for (id, state) in simulation.players {
+            ensurePlayerNode(for: id)
+            playerNodes[id]?.updatePosition(player: state)
+        }
 
-        // Update camera
+        // Remove stale player nodes
+        let activeIds = Set(simulation.players.keys)
+        for (id, node) in playerNodes where !activeIds.contains(id) {
+            node.sprite.removeFromParent()
+            playerNodes.removeValue(forKey: id)
+        }
+
+        // Camera follows local player
         let playerPixelPos = CGPoint(
             x: simulation.player.positionX * TileAtlas.tileSize,
             y: simulation.player.positionY * TileAtlas.tileSize
         )
         cameraController.update(playerPosition: playerPixelPos)
+    }
+
+    // MARK: - Player Node Management
+
+    @discardableResult
+    private func ensurePlayerNode(for playerId: PlayerId) -> PlayerNode {
+        if let existing = playerNodes[playerId] {
+            return existing
+        }
+        let node = PlayerNode(playerId: playerId)
+        worldNode.addChild(node.sprite)
+        playerNodes[playerId] = node
+        return node
     }
 
     // MARK: - macOS Input
@@ -125,8 +159,24 @@ final class GameScene: SKScene {
         inputMapper?.mouseDown(event, in: self)
     }
 
+    override func mouseDragged(with event: NSEvent) {
+        inputMapper?.mouseDragged(event, in: self)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        inputMapper?.mouseUp(event)
+    }
+
     override func rightMouseDown(with event: NSEvent) {
         inputMapper?.rightMouseDown(event, in: self)
+    }
+
+    override func rightMouseDragged(with event: NSEvent) {
+        inputMapper?.rightMouseDragged(event, in: self)
+    }
+
+    override func rightMouseUp(with event: NSEvent) {
+        inputMapper?.rightMouseUp(event)
     }
     #endif
 

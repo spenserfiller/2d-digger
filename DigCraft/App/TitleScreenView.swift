@@ -3,6 +3,8 @@ import SwiftUI
 struct TitleScreenView: View {
     var onNewGame: () -> Void
     var onLoadGame: () -> Void
+    var onHostGame: () -> Void
+    var onJoinGame: () -> Void
 
     var body: some View {
         VStack(spacing: 30) {
@@ -23,6 +25,24 @@ struct TitleScreenView: View {
                 .buttonStyle(.bordered)
                 .controlSize(.large)
                 .disabled(!SaveManager.hasSaveFile)
+
+                Divider()
+                    .frame(width: 200)
+                    .padding(.vertical, 4)
+
+                Button("Host Game") {
+                    onHostGame()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .tint(.green)
+
+                Button("Join Game") {
+                    onJoinGame()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .tint(.green)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -39,4 +39,18 @@ struct World: Sendable {
     func chunk(at coord: ChunkCoord) -> Chunk? {
         chunks[coord]
     }
+
+    // MARK: - Snapshot Methods
+
+    func chunkSnapshot(at coord: ChunkCoord) -> Chunk? {
+        chunks[coord]
+    }
+
+    mutating func restoreChunk(at coord: ChunkCoord, chunk: Chunk) {
+        chunks[coord] = chunk
+    }
+
+    var allChunkCoords: [ChunkCoord] {
+        Array(chunks.keys)
+    }
 }

@@ -8,6 +8,22 @@ options:
   createIntermediateGroups: true
   groupSortPosition: top
 
+schemes:
+  DigCraft_macOS:
+    build:
+      targets:
+        DigCraft_macOS: all
+    test:
+      targets:
+        - DigCraftTests_macOS
+  DigCraft_iOS:
+    build:
+      targets:
+        DigCraft_iOS: all
+    test:
+      targets:
+        - DigCraftTests_iOS
+
 targets:
   DigCraft:
     type: application
@@ -21,6 +37,8 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: true
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "DigCraft uses the local network for multiplayer games."
+        INFOPLIST_KEY_NSBonjourServices: ["_digcraft._tcp"]
         SWIFT_VERSION: "6.0"
         SWIFT_STRICT_CONCURRENCY: complete
       configs:
